@@ -1,0 +1,13 @@
+# Build output
+build/
+**/build/
+
+# Gradle
+.gradle/
+
+# IDE
+.idea/
+
+# Run directories (Minecraft dev instances)
+fabric/run/
+neoforge/run/

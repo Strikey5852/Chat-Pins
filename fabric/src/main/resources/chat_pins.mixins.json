@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "com.strikey.chat_pins.fabric.client.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "minVersion": "0.8",
+  "client": [
+    "ChatMessageMixin",
+    "ChatScreenMixin"
+  ],
+  "mixins": [],
+  "injectors": {
+  }
+}
