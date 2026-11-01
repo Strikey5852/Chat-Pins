@@ -1,0 +1,17 @@
+{
+  "chat_pins.screen.title": "Chat Pins",
+  "chat_pins.screen.overlay_scale": "Overlay Scale",
+  "chat_pins.screen.overlay_scale_value": "Overlay Scale: %s",
+  "chat_pins.screen.clear_all": "Clear All",
+  "chat_pins.screen.done": "Done",
+  "chat_pins.screen.sort": "Sort",
+  "chat_pins.screen.no_pins": "No pinned messages",
+  "chat_pins.search.placeholder": "Search...",
+  "chat_pins.sort.newest": "Newest",
+  "chat_pins.sort.oldest": "Oldest",
+  "chat_pins.sort.name": "A-Z",
+  "chat_pins.confirm.clear.title": "Clear All Pins",
+  "chat_pins.confirm.clear.message": "Are you sure you want to clear all pinned messages?",
+  "chat_pins.confirm.yes": "Yes",
+  "chat_pins.confirm.no": "No"
+}

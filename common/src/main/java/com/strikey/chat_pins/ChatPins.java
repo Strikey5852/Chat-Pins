@@ -10,9 +10,9 @@ public final class ChatPins {
 
     public static void init(Path configDir) {
         pinManager = new PinManager(configDir);
+        ChatPinsConfig.init(configDir.resolve("chat_pins/config.txt"));
     }
 
-    public static PinManager getPinManager() {
-        return pinManager;
-    }
+    public static PinManager getPinManager() { return pinManager; }
+    public static ChatPinsConfig getConfig() { return ChatPinsConfig.get(); }
 }

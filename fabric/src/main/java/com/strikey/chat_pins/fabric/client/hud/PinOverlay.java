@@ -52,6 +52,8 @@ public class PinOverlay {
                 lines.add(mc.font.split(Component.literal("+" + (pins.size() - MAX_DISPLAY) + " more"), MAX_TEXT_WIDTH).get(0));
             }
 
+            float scale = ChatPins.getConfig().getOverlayScale();
+
             int panelWidth = 0;
             for (FormattedCharSequence line : lines) {
                 panelWidth = Math.max(panelWidth, mc.font.width(line));
@@ -59,17 +61,29 @@ public class PinOverlay {
             panelWidth += PANEL_PADDING * 2;
 
             int panelHeight = lines.size() * LINE_HEIGHT + PANEL_PADDING * 2;
-            int x = scaledWidth - panelWidth - 4;
+            int x = scaledWidth - (int)(panelWidth * scale) - 4;
             int y = 4;
 
-            drawContext.fill(x, y, x + panelWidth, y + panelHeight, 0x90000000);
+            var pose = drawContext.pose();
+            pose.pushPose();
+            pose.translate(x, y, 0);
+            pose.scale(scale, scale, 1.0f);
 
-            int textX = x + PANEL_PADDING;
-            int textY = y + PANEL_PADDING;
+            drawContext.fill(0, 0, panelWidth, panelHeight, 0x90000000);
+
+            int borderColor = 0xFFFFFFFF;
+            drawContext.fill(0, 0, panelWidth, 1, borderColor);
+            drawContext.fill(0, panelHeight - 1, panelWidth, panelHeight, borderColor);
+            drawContext.fill(0, 0, 1, panelHeight, borderColor);
+            drawContext.fill(panelWidth - 1, 0, panelWidth, panelHeight, borderColor);
+
+            int textX = PANEL_PADDING;
+            int textY = PANEL_PADDING;
             for (FormattedCharSequence line : lines) {
-                drawContext.drawString(mc.font, line, textX, textY, 0xFFFFFF, false);
+                drawContext.drawString(mc.font, line, textX, textY, 0xFFFFFF, true);
                 textY += LINE_HEIGHT;
             }
+            pose.popPose();
         });
     }
 
