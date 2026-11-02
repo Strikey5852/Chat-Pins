@@ -52,7 +52,7 @@ public class PinOverlay {
                 lines.add(mc.font.split(Component.literal("+" + (pins.size() - MAX_DISPLAY) + " more"), MAX_TEXT_WIDTH).get(0));
             }
 
-            float scale = ChatPins.getConfig().getOverlayScale();
+            float scale = ChatPins.getConfig().getOverlayScale() * 0.75f;
 
             int panelWidth = 0;
             for (FormattedCharSequence line : lines) {

@@ -22,16 +22,16 @@ import java.util.Locale;
 public class PinManagerScreen extends Screen {
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT);
 
-    private static final int PANEL_WIDTH = 320;
-    private static final int PANEL_HEIGHT = 240;
-    private static final int ROW_HEIGHT = 24;
+    private static final int PANEL_WIDTH = 280;
+    private static final int PANEL_HEIGHT = 200;
+    private static final int ROW_HEIGHT = 20;
     private static final int HEADER_HEIGHT = 10;
-    private static final int FOOTER_HEIGHT = 38;
-    private static final int SEARCH_WIDTH = 200;
+    private static final int FOOTER_HEIGHT = 22;
+    private static final int SEARCH_WIDTH = 160;
     private static final int SEARCH_HEIGHT = 20;
-    private static final int SLIDER_WIDTH = 100;
-    private static final int SORT_BUTTON_WIDTH = 60;
-    private static final int BUTTON_WIDTH = 55;
+    private static final int SLIDER_WIDTH = 80;
+    private static final int SORT_BUTTON_WIDTH = 50;
+    private static final int BUTTON_WIDTH = 50;
     private static final int BUTTON_HEIGHT = 20;
 
     private enum SortMode {
@@ -73,13 +73,13 @@ public class PinManagerScreen extends Screen {
         panelX = (width - PANEL_WIDTH) / 2;
         panelY = (height - PANEL_HEIGHT) / 2;
 
-        int footerY = panelY + PANEL_HEIGHT - FOOTER_HEIGHT + 9;
+        int footerY = panelY + PANEL_HEIGHT - FOOTER_HEIGHT + (FOOTER_HEIGHT - BUTTON_HEIGHT) / 2;
 
         int maxScroll = maxScroll();
         scrollOffset = Math.min(scrollOffset, maxScroll);
 
         AbstractSliderButton scaleButton = new AbstractSliderButton(
-                panelX + 12, footerY, SLIDER_WIDTH, BUTTON_HEIGHT,
+                panelX + 10, footerY, SLIDER_WIDTH, BUTTON_HEIGHT,
                 Component.translatable("chat_pins.screen.overlay_scale"),
                 (ChatPins.getConfig().getOverlayScale() - 0.5f) / 1.5f
         ) {
@@ -98,12 +98,12 @@ public class PinManagerScreen extends Screen {
         };
         addRenderableWidget(scaleButton);
 
-        int sortX = panelX + 120;
+        int sortX = panelX + 100;
         sortButton = Button.builder(sortMode.label, b -> cycleSort())
                 .bounds(sortX, footerY, SORT_BUTTON_WIDTH, BUTTON_HEIGHT).build();
         addRenderableWidget(sortButton);
 
-        int clearX = panelX + PANEL_WIDTH - 125;
+        int clearX = panelX + PANEL_WIDTH - 120;
         Button clearButton = Button.builder(Component.translatable("chat_pins.screen.clear_all"), b -> {
             Minecraft.getInstance().setScreen(new ConfirmScreen(
                     confirmed -> {
