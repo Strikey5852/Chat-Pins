@@ -53,6 +53,9 @@ public class PinManagerScreen extends Screen {
     private String searchText = "";
     private SortMode sortMode = SortMode.NEWEST;
     private boolean searchFocused = false;
+    private boolean draggingScrollbar = false;
+    private int dragStartScrollOffset;
+    private double dragStartMouseY;
     private Button sortButton;
 
     public PinManagerScreen(String worldKey) {
@@ -180,6 +183,19 @@ public class PinManagerScreen extends Screen {
         return Math.max(0, visiblePins().size() * ROW_HEIGHT - listContentHeight());
     }
 
+    private int scrollbarX() {
+        return panelX + PANEL_WIDTH - 10;
+    }
+
+    private int scrollbarThumbY(int scrollOffset, int maxScroll) {
+        int thumbHeight = Math.max(20, (int) ((float) listContentHeight() * listContentHeight() / (float) Math.max(1, visiblePins().size() * ROW_HEIGHT)));
+        return listContentY() + (int) ((float) scrollOffset / Math.max(1, maxScroll) * (listContentHeight() - thumbHeight));
+    }
+
+    private int scrollbarThumbHeight() {
+        return Math.max(20, (int) ((float) listContentHeight() * listContentHeight() / (float) Math.max(1, visiblePins().size() * ROW_HEIGHT)));
+    }
+
     private boolean isSearchArea(double mouseX, double mouseY) {
         int searchX = panelX + (PANEL_WIDTH - SEARCH_WIDTH) / 2;
         return mouseX >= searchX && mouseX <= searchX + SEARCH_WIDTH
@@ -194,6 +210,19 @@ public class PinManagerScreen extends Screen {
         if (isSearchArea(mouseX, mouseY)) {
             searchFocused = true;
             return true;
+        }
+
+        int maxScroll = maxScroll();
+        if (maxScroll > 0) {
+            int barX = scrollbarX();
+            int thumbY = scrollbarThumbY(scrollOffset, maxScroll);
+            int thumbHeight = scrollbarThumbHeight();
+            if (mouseX >= barX && mouseX <= barX + 6 && mouseY >= thumbY && mouseY <= thumbY + thumbHeight) {
+                draggingScrollbar = true;
+                dragStartScrollOffset = scrollOffset;
+                dragStartMouseY = mouseY;
+                return true;
+            }
         }
 
         List<Pin> pins = visiblePins();
@@ -211,6 +240,30 @@ public class PinManagerScreen extends Screen {
         }
         searchFocused = false;
         return false;
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (button != 0 || !draggingScrollbar) {
+            return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        }
+
+        int maxScroll = maxScroll();
+        int thumbHeight = scrollbarThumbHeight();
+        int trackHeight = listContentHeight() - thumbHeight;
+        double dragDelta = mouseY - dragStartMouseY;
+        int newOffset = dragStartScrollOffset + (int) (dragDelta * maxScroll / Math.max(1, trackHeight));
+        scrollOffset = Math.max(0, Math.min(maxScroll, newOffset));
+        return true;
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (draggingScrollbar && button == 0) {
+            draggingScrollbar = false;
+            return true;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
