@@ -57,6 +57,8 @@ public class PinManagerScreen extends Screen {
     private int dragStartScrollOffset;
     private double dragStartMouseY;
     private Button sortButton;
+    private AbstractSliderButton scaleButton;
+    private boolean scaleButtonPressed;
 
     public PinManagerScreen(String worldKey) {
         this(worldKey, 0);
@@ -78,7 +80,7 @@ public class PinManagerScreen extends Screen {
         int maxScroll = maxScroll();
         scrollOffset = Math.min(scrollOffset, maxScroll);
 
-        AbstractSliderButton scaleButton = new AbstractSliderButton(
+        scaleButton = new AbstractSliderButton(
                 panelX + 10, footerY, SLIDER_WIDTH, BUTTON_HEIGHT,
                 Component.translatable("chat_pins.screen.overlay_scale"),
                 (ChatPins.getConfig().getOverlayScale() - 0.5f) / 1.5f
@@ -92,8 +94,6 @@ public class PinManagerScreen extends Screen {
             @Override
             protected void applyValue() {
                 ChatPins.getConfig().setOverlayScale((float) (0.5 + value * 1.5));
-                PinManagerScreen next = new PinManagerScreen(worldKey, scrollOffset);
-                Minecraft.getInstance().setScreen(next);
             }
         };
         addRenderableWidget(scaleButton);
@@ -204,6 +204,9 @@ public class PinManagerScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0 && scaleButton != null && scaleButton.isMouseOver(mouseX, mouseY)) {
+            scaleButtonPressed = true;
+        }
         if (super.mouseClicked(mouseX, mouseY, button)) return true;
         if (button != 0) return false;
 
@@ -263,7 +266,12 @@ public class PinManagerScreen extends Screen {
             draggingScrollbar = false;
             return true;
         }
-        return super.mouseReleased(mouseX, mouseY, button);
+        boolean result = super.mouseReleased(mouseX, mouseY, button);
+        if (scaleButtonPressed) {
+            this.setFocused(null);
+            scaleButtonPressed = false;
+        }
+        return result;
     }
 
     @Override
