@@ -75,6 +75,13 @@ public class PinManagerScreen extends Screen {
         panelX = (width - PANEL_WIDTH) / 2;
         panelY = (height - PANEL_HEIGHT) / 2;
 
+        String savedSortMode = ChatPins.getConfig().getSortMode();
+        sortMode = switch (savedSortMode) {
+            case "OLDEST" -> SortMode.OLDEST;
+            case "NAME" -> SortMode.NAME;
+            default -> SortMode.NEWEST;
+        };
+
         int footerY = panelY + PANEL_HEIGHT - FOOTER_HEIGHT + (FOOTER_HEIGHT - BUTTON_HEIGHT) / 2;
 
         int maxScroll = maxScroll();
@@ -132,6 +139,7 @@ public class PinManagerScreen extends Screen {
             case OLDEST -> SortMode.NAME;
             case NAME -> SortMode.NEWEST;
         };
+        ChatPins.getConfig().setSortMode(sortMode.name());
         PinManagerScreen next = new PinManagerScreen(worldKey, scrollOffset);
         next.sortMode = sortMode;
         Minecraft.getInstance().setScreen(next);

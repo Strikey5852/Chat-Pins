@@ -10,11 +10,14 @@ import java.nio.file.Path;
 public final class ChatPinsConfig {
     public static final String KEY_OVERLAY_SCALE = "overlayScale";
     public static final float DEFAULT_OVERLAY_SCALE = 1.0f;
+    public static final String KEY_SORT_MODE = "sortMode";
+    public static final String DEFAULT_SORT_MODE = "NEWEST";
 
     private static volatile ChatPinsConfig instance;
 
     private final Path configPath;
     private float overlayScale = DEFAULT_OVERLAY_SCALE;
+    private String sortMode = DEFAULT_SORT_MODE;
 
     public static ChatPinsConfig get() { return instance; }
     public static void init(Path configPath) { instance = new ChatPinsConfig(configPath); }
@@ -27,6 +30,12 @@ public final class ChatPinsConfig {
     public float getOverlayScale() { return overlayScale; }
     public void setOverlayScale(float value) {
         overlayScale = Math.clamp(value, 0.5f, 2.0f);
+        save();
+    }
+
+    public String getSortMode() { return sortMode; }
+    public void setSortMode(String value) {
+        sortMode = value;
         save();
     }
 
@@ -45,6 +54,8 @@ public final class ChatPinsConfig {
                             if (key.equals(KEY_OVERLAY_SCALE)) {
                                 try { overlayScale = Math.clamp(Float.parseFloat(value), 0.5f, 2.0f); }
                                 catch (NumberFormatException ignored) {}
+                            } else if (key.equals(KEY_SORT_MODE)) {
+                                sortMode = value;
                             }
                         }
                     }
@@ -62,6 +73,8 @@ public final class ChatPinsConfig {
                 StringBuilder sb = new StringBuilder();
                 sb.append("# Overlay scale (0.5 to 2.0)\n");
                 sb.append(KEY_OVERLAY_SCALE).append(" = ").append(overlayScale).append("\n");
+                sb.append("# Sort mode (NEWEST, OLDEST, NAME)\n");
+                sb.append(KEY_SORT_MODE).append(" = \"").append(sortMode).append("\"\n");
                 out.write(sb.toString().getBytes(StandardCharsets.UTF_8));
             }
         } catch (IOException ignored) {}

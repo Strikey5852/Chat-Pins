@@ -10,7 +10,7 @@ public final class ChatPins {
 
     public static void init(Path configDir) {
         pinManager = new PinManager(configDir);
-        ChatPinsConfig.init(configDir.resolve("chat_pins/config.txt"));
+        ChatPinsConfig.init(configDir.resolve("chat_pins/config.toml"));
     }
 
     public static PinManager getPinManager() { return pinManager; }
