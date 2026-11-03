@@ -24,15 +24,15 @@ public class PinManagerScreen extends Screen {
 
     private static final int PANEL_WIDTH = 280;
     private static final int PANEL_HEIGHT = 200;
-    private static final int ROW_HEIGHT = 20;
+    private static final int ROW_HEIGHT = 21;
     private static final int HEADER_HEIGHT = 10;
-    private static final int FOOTER_HEIGHT = 22;
+    private static final int FOOTER_HEIGHT = 18;
     private static final int SEARCH_WIDTH = 160;
     private static final int SEARCH_HEIGHT = 20;
     private static final int SLIDER_WIDTH = 80;
     private static final int SORT_BUTTON_WIDTH = 50;
     private static final int BUTTON_WIDTH = 50;
-    private static final int BUTTON_HEIGHT = 20;
+    private static final int BUTTON_HEIGHT = 16;
 
     private enum SortMode {
         NEWEST(Component.translatable("chat_pins.sort.newest")),
@@ -356,7 +356,7 @@ public class PinManagerScreen extends Screen {
 
         // Search text (vertically centred)
         String displayText = searchText;
-        int textY = searchY + (SEARCH_HEIGHT - font.lineHeight) / 2;
+        int textY = searchY + (SEARCH_HEIGHT - font.lineHeight) / 2 + 1;
         if (searchText.isEmpty()) {
             g.drawString(font, Component.translatable("chat_pins.search.placeholder"), searchX + 8, textY, 0x808080, false);
         } else {
@@ -382,13 +382,13 @@ public class PinManagerScreen extends Screen {
                         .atZone(ZoneId.systemDefault())
                         .format(TIME_FORMAT);
                 int timeWidth = font.width(timeStr);
-                g.drawString(font, timeStr, panelX + 8, rowY + 4, 0x808080, false);
+                g.drawString(font, timeStr, panelX + 8, rowY + 6, 0x808080, false);
 
                 String label = (pin.system() ? "[System] " : "") + pin.sender() + ": " + pin.content();
                 int remainingWidth = maxLabelWidth - timeWidth - 8;
                 label = font.plainSubstrByWidth(label, remainingWidth);
                 int textColor = pin.system() ? 0xA0A0A0 : 0xFFFFFF;
-                g.drawString(font, label, panelX + 8 + timeWidth + 4, rowY + 4, textColor, false);
+                g.drawString(font, label, panelX + 8 + timeWidth + 4, rowY + 6, textColor, false);
 
                 int removeX = panelX + PANEL_WIDTH - 54;
                 boolean removeHovered = mouseX >= removeX && mouseX <= removeX + 44 && mouseY >= rowY + 2 && mouseY <= rowY + ROW_HEIGHT - 2;

@@ -70,7 +70,8 @@ public class ChatScreenMixin {
 
             if (entry != null) {
                 String worldKey = Minecraft.getInstance().getCurrentServer() != null ? Minecraft.getInstance().getCurrentServer().ip : "singleplayer";
-                ChatPins.getPinManager().addPin(worldKey, entry.sender, entry.content, false);
+                boolean isSystem = entry.sender.isEmpty();
+                ChatPins.getPinManager().addPin(worldKey, entry.sender, entry.content, isSystem);
                 LOGGER.info("right-click: pinned");
             } else {
                 LOGGER.warn("right-click: no ChatHistory entry found for text");
