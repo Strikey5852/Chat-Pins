@@ -65,7 +65,11 @@ public class PinManager {
             return false;
         }
         pins.clear();
-        save(worldKey);
+        Path file = getFile(worldKey);
+        try {
+            Files.createDirectories(file.getParent());
+            Files.writeString(file, "[]");
+        } catch (IOException ignored) {}
         return true;
     }
 
