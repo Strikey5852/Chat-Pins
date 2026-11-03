@@ -24,15 +24,15 @@ public class PinManagerScreen extends Screen {
 
     private static final int PANEL_WIDTH = 280;
     private static final int PANEL_HEIGHT = 200;
-    private static final int ROW_HEIGHT = 21;
-    private static final int HEADER_HEIGHT = 10;
-    private static final int FOOTER_HEIGHT = 18;
+    private static final int HEADER_HEIGHT = 4;
+    private static final int FOOTER_HEIGHT = 24;
     private static final int SEARCH_WIDTH = 160;
     private static final int SEARCH_HEIGHT = 20;
     private static final int SLIDER_WIDTH = 80;
     private static final int SORT_BUTTON_WIDTH = 50;
     private static final int BUTTON_WIDTH = 50;
     private static final int BUTTON_HEIGHT = 16;
+    private static final int MIN_ROW_HEIGHT = 21;
 
     private enum SortMode {
         NEWEST(Component.translatable("chat_pins.sort.newest")),
@@ -179,16 +179,50 @@ public class PinManagerScreen extends Screen {
     }
 
     private int listContentY() {
-        return searchY() + SEARCH_HEIGHT + 4;
+        return searchY() + SEARCH_HEIGHT + HEADER_HEIGHT;
     }
 
     private int listContentHeight() {
         int raw = PANEL_HEIGHT - FOOTER_HEIGHT - (listContentY() - panelY);
-        return raw - (raw % ROW_HEIGHT);
+        return raw;
     }
 
     private int maxScroll() {
-        return Math.max(0, visiblePins().size() * ROW_HEIGHT - listContentHeight());
+        return Math.max(0, computeTotalContentHeight(visiblePins()) - listContentHeight());
+    }
+
+    private int computeTotalContentHeight(List<Pin> pins) {
+        int total = 0;
+        int lineHeight = font.lineHeight;
+        int maxLabelWidth = PANEL_WIDTH - 80;
+        for (Pin pin : pins) {
+            String timeStr = Instant.ofEpochMilli(pin.timestamp())
+                    .atZone(ZoneId.systemDefault())
+                    .format(TIME_FORMAT);
+            int timeWidth = font.width(timeStr);
+            int remainingWidth = maxLabelWidth - timeWidth - 8;
+            String label = (pin.system() ? "[System] " : "") + pin.sender() + ": " + pin.content();
+            int lines = wrapText(label, remainingWidth).size();
+            total += Math.max(MIN_ROW_HEIGHT, lines * lineHeight + lineHeight);
+        }
+        return total;
+    }
+
+    private List<String> wrapText(String text, int maxWidth) {
+        List<String> lines = new ArrayList<>();
+        if (text.isEmpty()) {
+            lines.add("");
+            return lines;
+        }
+        while (!text.isEmpty()) {
+            String line = font.plainSubstrByWidth(text, maxWidth);
+            if (line.isEmpty()) {
+                line = text.substring(0, 1);
+            }
+            lines.add(line);
+            text = text.substring(line.length()).stripLeading();
+        }
+        return lines;
     }
 
     private int scrollbarX() {
@@ -196,12 +230,12 @@ public class PinManagerScreen extends Screen {
     }
 
     private int scrollbarThumbY(int scrollOffset, int maxScroll) {
-        int thumbHeight = Math.max(20, (int) ((float) listContentHeight() * listContentHeight() / (float) Math.max(1, visiblePins().size() * ROW_HEIGHT)));
+        int thumbHeight = Math.max(20, (int) ((float) listContentHeight() * listContentHeight() / (float) Math.max(1, computeTotalContentHeight(visiblePins()))));
         return listContentY() + (int) ((float) scrollOffset / Math.max(1, maxScroll) * (listContentHeight() - thumbHeight));
     }
 
     private int scrollbarThumbHeight() {
-        return Math.max(20, (int) ((float) listContentHeight() * listContentHeight() / (float) Math.max(1, visiblePins().size() * ROW_HEIGHT)));
+        return Math.max(20, (int) ((float) listContentHeight() * listContentHeight() / (float) Math.max(1, computeTotalContentHeight(visiblePins()))));
     }
 
     private boolean isSearchArea(double mouseX, double mouseY) {
@@ -238,16 +272,26 @@ public class PinManagerScreen extends Screen {
 
         List<Pin> pins = visiblePins();
         int listY = listContentY();
+        int currentY = listY - scrollOffset;
+        int lineHeight = font.lineHeight;
+        int maxLabelWidth = PANEL_WIDTH - 80;
         for (int i = 0; i < pins.size(); i++) {
-            int rowY = listY + i * ROW_HEIGHT - scrollOffset;
-            if (rowY + ROW_HEIGHT < listY || rowY > listY + listContentHeight()) continue;
+            Pin pin = pins.get(i);
+            String timeStr = Instant.ofEpochMilli(pin.timestamp())
+                    .atZone(ZoneId.systemDefault())
+                    .format(TIME_FORMAT);
+            int timeWidth = font.width(timeStr);
+            int remainingWidth = maxLabelWidth - timeWidth - 8;
+            String label = (pin.system() ? "[System] " : "") + pin.sender() + ": " + pin.content();
+            int rowHeight = Math.max(MIN_ROW_HEIGHT, wrapText(label, remainingWidth).size() * lineHeight + lineHeight);
             int removeX = panelX + PANEL_WIDTH - 54;
-            if (mouseX >= removeX && mouseX <= removeX + 44 && mouseY >= rowY + 2 && mouseY <= rowY + ROW_HEIGHT - 2) {
+            if (mouseX >= removeX && mouseX <= removeX + 44 && mouseY >= currentY + 2 && mouseY <= currentY + rowHeight - 2) {
                 ChatPins.getPinManager().removePin(worldKey, pins.get(i).id());
                 searchFocused = false;
                 Minecraft.getInstance().setScreen(new PinManagerScreen(worldKey, scrollOffset));
                 return true;
             }
+            currentY += rowHeight;
         }
         searchFocused = false;
         return false;
@@ -285,7 +329,7 @@ public class PinManagerScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (mouseX >= panelX && mouseX <= panelX + PANEL_WIDTH && mouseY >= listContentY() && mouseY <= listContentY() + listContentHeight()) {
-            scrollOffset = (int) Math.max(0, Math.min(maxScroll(), scrollOffset - scrollY * ROW_HEIGHT));
+            scrollOffset = (int) Math.max(0, Math.min(maxScroll(), scrollOffset - scrollY * font.lineHeight));
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
@@ -318,11 +362,22 @@ public class PinManagerScreen extends Screen {
 
     private int hoveredRow(double mouseX, double mouseY, List<Pin> pins) {
         int listY = listContentY();
+        int currentY = listY - scrollOffset;
+        int lineHeight = font.lineHeight;
+        int maxLabelWidth = PANEL_WIDTH - 80;
         for (int i = 0; i < pins.size(); i++) {
-            int rowY = listY + i * ROW_HEIGHT - scrollOffset;
-            if (mouseX >= panelX && mouseX <= panelX + PANEL_WIDTH - 14 && mouseY >= rowY && mouseY <= rowY + ROW_HEIGHT) {
+            Pin pin = pins.get(i);
+            String timeStr = Instant.ofEpochMilli(pin.timestamp())
+                    .atZone(ZoneId.systemDefault())
+                    .format(TIME_FORMAT);
+            int timeWidth = font.width(timeStr);
+            int remainingWidth = maxLabelWidth - timeWidth - 8;
+            String label = (pin.system() ? "[System] " : "") + pin.sender() + ": " + pin.content();
+            int rowHeight = Math.max(MIN_ROW_HEIGHT, wrapText(label, remainingWidth).size() * lineHeight + lineHeight);
+            if (mouseX >= panelX && mouseX <= panelX + PANEL_WIDTH - 14 && mouseY >= currentY && mouseY <= currentY + rowHeight) {
                 return i;
             }
+            currentY += rowHeight;
         }
         return -1;
     }
@@ -367,51 +422,88 @@ public class PinManagerScreen extends Screen {
             g.drawCenteredString(font, Component.translatable("chat_pins.screen.no_pins"),
                     panelX + PANEL_WIDTH / 2, listContentY() + listContentHeight() / 2, 0xAAAAAA);
         } else {
-            g.enableScissor(panelX + 2, listContentY(), panelX + PANEL_WIDTH - 14, listContentY() + listContentHeight());
+            int lineHeight = font.lineHeight;
             int maxLabelWidth = PANEL_WIDTH - 80;
+            int totalContentHeight = computeTotalContentHeight(pins);
+
+            List<List<String>> wrappedLines = new ArrayList<>(pins.size());
+            int[] rowHeights = new int[pins.size()];
+            String[] timeStrs = new String[pins.size()];
+            int[] timeWidths = new int[pins.size()];
             for (int i = 0; i < pins.size(); i++) {
-                int rowY = listContentY() + i * ROW_HEIGHT - scrollOffset;
-                if (rowY + ROW_HEIGHT < listContentY() || rowY > listContentY() + listContentHeight()) continue;
                 Pin pin = pins.get(i);
-
-                boolean rowHovered = hoveredRow == i;
-                int rowBg = rowHovered ? 0xFF5A5A5A : (i % 2 == 0 ? 0xFF555555 : 0xFF333333);
-                g.fill(panelX + 2, rowY + 1, panelX + PANEL_WIDTH - 14, rowY + ROW_HEIGHT - 2, rowBg);
-
                 String timeStr = Instant.ofEpochMilli(pin.timestamp())
                         .atZone(ZoneId.systemDefault())
                         .format(TIME_FORMAT);
                 int timeWidth = font.width(timeStr);
-                g.drawString(font, timeStr, panelX + 8, rowY + 6, 0x808080, false);
-
-                String label = (pin.system() ? "[System] " : "") + pin.sender() + ": " + pin.content();
                 int remainingWidth = maxLabelWidth - timeWidth - 8;
-                label = font.plainSubstrByWidth(label, remainingWidth);
+                String label = (pin.system() ? "[System] " : "") + pin.sender() + ": " + pin.content();
+                List<String> lines = wrapText(label, remainingWidth);
+                wrappedLines.add(lines);
+                timeStrs[i] = timeStr;
+                timeWidths[i] = timeWidth;
+                rowHeights[i] = Math.max(MIN_ROW_HEIGHT, lines.size() * lineHeight + lineHeight);
+            }
+
+            int listContentY = listContentY();
+            int listContentHeight = listContentHeight();
+            g.enableScissor(panelX + 2, listContentY, panelX + PANEL_WIDTH - 14, listContentY + listContentHeight);
+
+            int currentY = listContentY - scrollOffset;
+            for (int i = 0; i < pins.size(); i++) {
+                Pin pin = pins.get(i);
+                List<String> lines = wrappedLines.get(i);
+                int rowHeight = rowHeights[i];
+                int rowY = currentY;
+
+                if (rowY + rowHeight < listContentY || rowY > listContentY + listContentHeight) {
+                    currentY += rowHeight;
+                    continue;
+                }
+
+                boolean rowHovered = hoveredRow == i;
+                int rowBg = rowHovered ? 0xFF5A5A5A : (i % 2 == 0 ? 0xFF555555 : 0xFF333333);
+                g.fill(panelX + 2, rowY + 1, panelX + PANEL_WIDTH - 14, rowY + rowHeight - 1, rowBg);
+
+                String timeStr = timeStrs[i];
+                int timeWidth = timeWidths[i];
+
+                int textBlockHeight = lines.size() * lineHeight;
+                int labelY = rowY + (rowHeight - textBlockHeight) / 2;
+                int timeY = rowY + (rowHeight - lineHeight) / 2;
+                g.drawString(font, timeStr, panelX + 8, timeY, 0x808080, false);
+
+                int labelX = panelX + 8 + timeWidth + 4;
                 int textColor = pin.system() ? 0xA0A0A0 : 0xFFFFFF;
-                g.drawString(font, label, panelX + 8 + timeWidth + 4, rowY + 6, textColor, false);
+                for (String line : lines) {
+                    g.drawString(font, line, labelX, labelY, textColor, false);
+                    labelY += lineHeight;
+                }
 
                 int removeX = panelX + PANEL_WIDTH - 54;
-                boolean removeHovered = mouseX >= removeX && mouseX <= removeX + 44 && mouseY >= rowY + 2 && mouseY <= rowY + ROW_HEIGHT - 2;
+                int removeButtonY = rowY + (rowHeight - 16) / 2;
+                boolean removeHovered = mouseX >= removeX && mouseX <= removeX + 44 && mouseY >= rowY + 2 && mouseY <= rowY + rowHeight - 2;
                 g.blit(ResourceLocation.withDefaultNamespace("textures/gui/sprites/widget/" + (removeHovered ? "cross_button_highlighted" : "cross_button") + ".png"),
-                        removeX + 14, rowY + (ROW_HEIGHT - 16) / 2, 0, 0, 16, 16, 16, 16);
+                        removeX + 14, removeButtonY, 0, 0, 16, 16, 16, 16);
+
+                currentY += rowHeight;
             }
             g.disableScissor();
 
-            g.fill(panelX + 2, listContentY() + listContentHeight(), panelX + PANEL_WIDTH - 2, listContentY() + listContentHeight() + 1, 0x40FFFFFF);
+            g.fill(panelX + 2, listContentY + listContentHeight, panelX + PANEL_WIDTH - 2, listContentY + listContentHeight + 1, 0x40FFFFFF);
 
             int maxScroll = maxScroll();
-            int contentHeight = pins.size() * ROW_HEIGHT;
             int barX = panelX + PANEL_WIDTH - 10;
-            int thumbHeight = Math.max(20, (int) ((float) listContentHeight() * listContentHeight() / contentHeight));
-            int thumbY = listContentY() + (int) ((float) scrollOffset / Math.max(1, maxScroll) * (listContentHeight() - thumbHeight));
+            int thumbHeight = Math.max(20, (int) ((float) listContentHeight * listContentHeight / (float) Math.max(1, totalContentHeight)));
+            int thumbY = listContentY + (int) ((float) scrollOffset / Math.max(1, maxScroll) * (listContentHeight - thumbHeight));
             ResourceLocation bg = ResourceLocation.withDefaultNamespace("widget/scroller_background");
             ResourceLocation thumb = ResourceLocation.withDefaultNamespace("widget/scroller");
-            g.blitSprite(bg, barX, listContentY(), 6, listContentHeight());
+            g.blitSprite(bg, barX, listContentY, 6, listContentHeight);
             if (maxScroll > 0) {
                 g.blitSprite(thumb, barX, thumbY, 6, thumbHeight);
             } else {
                 // Draw a disabled thumb when nothing can scroll
-                g.fill(barX, listContentY(), barX + 6, listContentY() + listContentHeight(), 0xFF4A4A4A);
+                g.fill(barX, listContentY, barX + 6, listContentY + listContentHeight, 0xFF4A4A4A);
             }
         }
 
