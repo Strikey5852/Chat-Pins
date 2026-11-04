@@ -38,6 +38,9 @@ public class PinOverlay {
             }
 
             int scaledWidth = mc.getWindow().getGuiScaledWidth();
+            int scaledHeight = mc.getWindow().getGuiScaledHeight();
+
+            String position = ChatPins.getConfig().getOverlayPosition();
 
             List<FormattedCharSequence> lines = new ArrayList<>();
             int displayed = 0;
@@ -61,8 +64,28 @@ public class PinOverlay {
             panelWidth += PANEL_PADDING * 2;
 
             int panelHeight = lines.size() * LINE_HEIGHT + PANEL_PADDING * 2;
-            int x = scaledWidth - (int)(panelWidth * scale) - 4;
-            int y = 4;
+
+            int x;
+            int y;
+            switch (position) {
+                case "TOP_LEFT":
+                    x = 4;
+                    y = 4;
+                    break;
+                case "BOTTOM_LEFT":
+                    x = 4;
+                    y = scaledHeight - (int) (panelHeight * scale) - 4;
+                    break;
+                case "BOTTOM_RIGHT":
+                    x = scaledWidth - (int) (panelWidth * scale) - 4;
+                    y = scaledHeight - (int) (panelHeight * scale) - 4;
+                    break;
+                case "TOP_RIGHT":
+                default:
+                    x = scaledWidth - (int) (panelWidth * scale) - 4;
+                    y = 4;
+                    break;
+            }
 
             var pose = drawContext.pose();
             pose.pushPose();
