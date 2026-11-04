@@ -1,13 +1,10 @@
 package com.strikey.chat_pins.fabric.client.mixin;
 
 import com.strikey.chat_pins.ChatPins;
-import com.strikey.chat_pins.fabric.client.history.ChatHistory;
-import com.strikey.chat_pins.fabric.client.history.ChatHistory.ChatEntry;
+import com.strikey.chat_pins.fabric.client.accessor.ChatComponentAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.gui.screens.ChatScreen;
-import net.minecraft.util.FormattedCharSequence;
-import net.minecraft.util.FormattedCharSink;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongepowered.asm.mixin.Mixin;
@@ -27,55 +24,24 @@ public class ChatScreenMixin {
         try {
             ChatComponent chat = Minecraft.getInstance().gui.getChat();
 
-            double scale = chat.getScale();
-            java.lang.reflect.Method lhMethod = ChatComponent.class.getDeclaredMethod("getLineHeight");
-            lhMethod.setAccessible(true);
-            int lineHeight = (int) lhMethod.invoke(chat);
-            int screenH = Minecraft.getInstance().getWindow().getGuiScaledHeight();
-            double chatX = mouseX / scale - 4.0;
-            double chatY = (screenH - mouseY - 40.0) / (scale * lineHeight);
-
-            java.lang.reflect.Method m = ChatComponent.class.getDeclaredMethod("getMessageLineIndexAt", double.class, double.class);
-            m.setAccessible(true);
-            int lineIndex = (int) m.invoke(chat, chatX, chatY);
-            LOGGER.info("right-click: lineIndex={}", lineIndex);
-
-            if (lineIndex < 0) return;
-
-            java.lang.reflect.Field f = ChatComponent.class.getDeclaredField("trimmedMessages");
-            f.setAccessible(true);
-            java.util.List<?> trimmed = (java.util.List<?>) f.get(chat);
-            if (lineIndex >= trimmed.size()) return;
-
-            Object line = trimmed.get(lineIndex);
-            java.lang.reflect.Method contentMethod = line.getClass().getDeclaredMethod("content");
-            FormattedCharSequence seq = (FormattedCharSequence) contentMethod.invoke(line);
-
-            StringBuilder sb = new StringBuilder();
-            seq.accept((index, style, codepoint) -> { sb.appendCodePoint(codepoint); return true; });
-            String text = sb.toString().trim();
+            String text = ((ChatComponentAccessor) chat).chat_pins$getMessageAt(mouseX, mouseY);
+            if (text == null || text.isEmpty()) return;
             LOGGER.info("right-click: text={}", text);
 
-            if (text.isEmpty()) return;
+            String worldKey = Minecraft.getInstance().getCurrentServer() != null ? Minecraft.getInstance().getCurrentServer().ip : "singleplayer";
+            boolean isSystem = true;
+            String sender = "";
+            String content = text;
 
-            ChatEntry entry = null;
-            for (int i = 0; i < 100; i++) {
-                ChatEntry e = ChatHistory.getInstance().get(i);
-                if (e == null) break;
-                if (e.content.contains(text) || text.contains(e.content.trim())) {
-                    entry = e;
-                    break;
-                }
+            if (text.startsWith("<") && text.contains("> ")) {
+                int end = text.indexOf("> ");
+                sender = text.substring(1, end);
+                content = text.substring(end + 2);
+                isSystem = false;
             }
 
-            if (entry != null) {
-                String worldKey = Minecraft.getInstance().getCurrentServer() != null ? Minecraft.getInstance().getCurrentServer().ip : "singleplayer";
-                boolean isSystem = entry.sender.isEmpty();
-                ChatPins.getPinManager().addPin(worldKey, entry.sender, entry.content, isSystem);
-                LOGGER.info("right-click: pinned");
-            } else {
-                LOGGER.warn("right-click: no ChatHistory entry found for text");
-            }
+            ChatPins.getPinManager().addPin(worldKey, sender, content, isSystem);
+            LOGGER.info("right-click: pinned");
         } catch (Exception e) {
             LOGGER.error("right-click error", e);
         }
