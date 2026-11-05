@@ -22,7 +22,7 @@ import java.util.Locale;
 public class PinManagerScreen extends Screen {
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT);
 
-    private static final int PANEL_WIDTH = 280;
+    private static final int PANEL_WIDTH = 332;
     private static final int PANEL_HEIGHT = 200;
     private static final int HEADER_HEIGHT = 4;
     private static final int FOOTER_HEIGHT = 24;
@@ -46,17 +46,32 @@ public class PinManagerScreen extends Screen {
         }
     }
 
+    private enum PositionMode {
+        TOP_LEFT(Component.translatable("chat_pins.position.top_left")),
+        TOP_RIGHT(Component.translatable("chat_pins.position.top_right")),
+        BOTTOM_LEFT(Component.translatable("chat_pins.position.btm_left")),
+        BOTTOM_RIGHT(Component.translatable("chat_pins.position.btm_right"));
+
+        private final Component label;
+
+        PositionMode(Component label) {
+            this.label = label;
+        }
+    }
+
     private final String worldKey;
     private int scrollOffset;
     private int panelX;
     private int panelY;
     private String searchText = "";
     private SortMode sortMode = SortMode.NEWEST;
+    private PositionMode positionMode = PositionMode.TOP_RIGHT;
     private boolean searchFocused = false;
     private boolean draggingScrollbar = false;
     private int dragStartScrollOffset;
     private double dragStartMouseY;
     private Button sortButton;
+    private Button positionButton;
     private AbstractSliderButton scaleButton;
     private boolean scaleButtonPressed;
 
@@ -82,6 +97,14 @@ public class PinManagerScreen extends Screen {
             default -> SortMode.NEWEST;
         };
 
+        String savedPosition = ChatPins.getConfig().getOverlayPosition();
+        positionMode = switch (savedPosition) {
+            case "TOP_LEFT" -> PositionMode.TOP_LEFT;
+            case "BOTTOM_LEFT" -> PositionMode.BOTTOM_LEFT;
+            case "BOTTOM_RIGHT" -> PositionMode.BOTTOM_RIGHT;
+            default -> PositionMode.TOP_RIGHT;
+        };
+
         int footerY = panelY + PANEL_HEIGHT - FOOTER_HEIGHT + (FOOTER_HEIGHT - BUTTON_HEIGHT) / 2;
 
         int maxScroll = maxScroll();
@@ -105,12 +128,17 @@ public class PinManagerScreen extends Screen {
         };
         addRenderableWidget(scaleButton);
 
-        int sortX = panelX + 100;
+        int positionX = panelX + 98;
+        positionButton = Button.builder(positionMode.label, b -> cyclePosition())
+                .bounds(positionX, footerY, BUTTON_WIDTH, BUTTON_HEIGHT).build();
+        addRenderableWidget(positionButton);
+
+        int sortX = panelX + 156;
         sortButton = Button.builder(sortMode.label, b -> cycleSort())
                 .bounds(sortX, footerY, SORT_BUTTON_WIDTH, BUTTON_HEIGHT).build();
         addRenderableWidget(sortButton);
 
-        int clearX = panelX + PANEL_WIDTH - 120;
+        int clearX = panelX + 214;
         Button clearButton = Button.builder(Component.translatable("chat_pins.screen.clear_all"), b -> {
             Minecraft.getInstance().setScreen(new ConfirmScreen(
                     confirmed -> {
@@ -127,7 +155,7 @@ public class PinManagerScreen extends Screen {
         }).bounds(clearX, footerY, BUTTON_WIDTH, BUTTON_HEIGHT).build();
         addRenderableWidget(clearButton);
 
-        int doneX = panelX + PANEL_WIDTH - 60;
+        int doneX = panelX + 272;
         Button doneButton = Button.builder(Component.translatable("chat_pins.screen.done"), b -> onClose())
                 .bounds(doneX, footerY, BUTTON_WIDTH, BUTTON_HEIGHT).build();
         addRenderableWidget(doneButton);
@@ -142,6 +170,19 @@ public class PinManagerScreen extends Screen {
         ChatPins.getConfig().setSortMode(sortMode.name());
         PinManagerScreen next = new PinManagerScreen(worldKey, scrollOffset);
         next.sortMode = sortMode;
+        Minecraft.getInstance().setScreen(next);
+    }
+
+    private void cyclePosition() {
+        positionMode = switch (positionMode) {
+            case TOP_LEFT -> PositionMode.TOP_RIGHT;
+            case TOP_RIGHT -> PositionMode.BOTTOM_LEFT;
+            case BOTTOM_LEFT -> PositionMode.BOTTOM_RIGHT;
+            case BOTTOM_RIGHT -> PositionMode.TOP_LEFT;
+        };
+        ChatPins.getConfig().setOverlayPosition(positionMode.name());
+        PinManagerScreen next = new PinManagerScreen(worldKey, scrollOffset);
+        next.positionMode = positionMode;
         Minecraft.getInstance().setScreen(next);
     }
 
