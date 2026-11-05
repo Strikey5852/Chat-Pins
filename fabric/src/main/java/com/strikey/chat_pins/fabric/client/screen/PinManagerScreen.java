@@ -250,18 +250,42 @@ public class PinManagerScreen extends Screen {
     }
 
     private List<String> wrapText(String text, int maxWidth) {
-        List<String> lines = new ArrayList<>();
         if (text.isEmpty()) {
-            lines.add("");
-            return lines;
+            return List.of("");
         }
-        while (!text.isEmpty()) {
-            String line = font.plainSubstrByWidth(text, maxWidth);
-            if (line.isEmpty()) {
-                line = text.substring(0, 1);
+        List<String> lines = new ArrayList<>();
+        String[] words = text.split(" ");
+        StringBuilder current = new StringBuilder();
+        for (String word : words) {
+            if (font.width(word) > maxWidth) {
+                if (current.length() > 0) {
+                    lines.add(current.toString());
+                    current.setLength(0);
+                }
+                String remaining = word;
+                while (!remaining.isEmpty()) {
+                    String piece = font.plainSubstrByWidth(remaining, maxWidth);
+                    if (piece.isEmpty()) {
+                        piece = remaining.substring(0, 1);
+                    }
+                    lines.add(piece);
+                    remaining = remaining.substring(piece.length());
+                }
+            } else {
+                String candidate = current.isEmpty() ? word : current + " " + word;
+                if (font.width(candidate) <= maxWidth) {
+                    if (current.length() > 0) {
+                        current.append(' ');
+                    }
+                    current.append(word);
+                } else {
+                    lines.add(current.toString());
+                    current = new StringBuilder(word);
+                }
             }
-            lines.add(line);
-            text = text.substring(line.length()).stripLeading();
+        }
+        if (current.length() > 0) {
+            lines.add(current.toString());
         }
         return lines;
     }
