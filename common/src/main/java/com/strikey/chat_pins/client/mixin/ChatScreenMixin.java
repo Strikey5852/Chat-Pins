@@ -1,7 +1,7 @@
-package com.strikey.chat_pins.fabric.client.mixin;
+package com.strikey.chat_pins.client.mixin;
 
 import com.strikey.chat_pins.ChatPins;
-import com.strikey.chat_pins.fabric.client.accessor.ChatComponentAccessor;
+import com.strikey.chat_pins.client.accessor.ChatComponentAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.gui.screens.ChatScreen;

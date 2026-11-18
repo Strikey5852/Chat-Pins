@@ -1,4 +1,4 @@
-package com.strikey.chat_pins.fabric.client.accessor;
+package com.strikey.chat_pins.client.accessor;
 
 import net.minecraft.util.FormattedCharSequence;
 

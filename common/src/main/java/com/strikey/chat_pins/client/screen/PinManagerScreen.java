@@ -1,4 +1,4 @@
-package com.strikey.chat_pins.fabric.client.screen;
+package com.strikey.chat_pins.client.screen;
 
 import com.strikey.chat_pins.ChatPins;
 import com.strikey.chat_pins.pin.Pin;

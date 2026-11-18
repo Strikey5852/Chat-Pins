@@ -1,6 +1,6 @@
-package com.strikey.chat_pins.fabric.client.mixin;
+package com.strikey.chat_pins.client.mixin;
 
-import com.strikey.chat_pins.fabric.client.accessor.LineAccessor;
+import com.strikey.chat_pins.client.accessor.LineAccessor;
 import net.minecraft.client.GuiMessage;
 import net.minecraft.util.FormattedCharSequence;
 import org.spongepowered.asm.mixin.Mixin;

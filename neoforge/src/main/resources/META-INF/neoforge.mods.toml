@@ -1,15 +1,15 @@
 modLoader = "javafml"
 loaderVersion = "[4,)"
-#issueTrackerURL = ""
-license = "Insert License Here"
+issueTrackerURL = "https://github.com/Strikey5852/Chat-Pins/issues"
+license = "GPL-3.0-only"
 
 [[mods]]
 modId = "chat_pins"
 version = "${version}"
 displayName = "Chat Pins"
-authors = "Me!"
+authors = "Strikey"
 description = '''
-This is an example description! Tell everyone what your mod is about!
+Client side mod that lets you pin chat messages.
 '''
 #logoFile = ""
 
@@ -18,21 +18,14 @@ modId = "neoforge"
 type = "required"
 versionRange = "[21.1,)"
 ordering = "NONE"
-side = "BOTH"
+side = "CLIENT"
 
 [[dependencies.chat_pins]]
 modId = "minecraft"
 type = "required"
 versionRange = "[1.21.1,)"
 ordering = "NONE"
-side = "BOTH"
-
-[[dependencies.chat_pins]]
-modId = "architectury"
-type = "required"
-versionRange = "[13.0.11,)"
-ordering = "AFTER"
-side = "BOTH"
+side = "CLIENT"
 
 [[mixins]]
 config = "chat_pins.mixins.json"

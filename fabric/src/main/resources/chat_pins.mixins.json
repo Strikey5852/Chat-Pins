@@ -1,6 +1,7 @@
 {
   "required": true,
-  "package": "com.strikey.chat_pins.fabric.client.mixin",
+  "refmap": "chat_pins-refmap.json",
+  "package": "com.strikey.chat_pins.client.mixin",
   "compatibilityLevel": "JAVA_21",
   "minVersion": "0.8",
   "client": [

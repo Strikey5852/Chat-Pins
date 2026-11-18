@@ -1,4 +1,4 @@
-package com.strikey.chat_pins.fabric.client.history;
+package com.strikey.chat_pins.client.history;
 
 import net.minecraft.network.chat.Component;
 
