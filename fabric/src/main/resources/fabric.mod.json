@@ -3,17 +3,18 @@
   "id": "chat_pins",
   "version": "${version}",
   "name": "Chat Pins",
-  "description": "Pin chat messages client-side",
+  "description": "Client side mod that lets you pin chat messages.",
   "authors": [
-    "Me!"
+    "Strikey"
   ],
   "contact": {
-    "homepage": "https://fabricmc.net/",
-    "sources": "https://github.com/FabricMC/fabric-example-mod"
+    "homepage": "https://github.com/Strikey5852/Chat-Pins",
+    "sources": "https://github.com/Strikey5852/Chat-Pins",
+    "issues": "https://github.com/Strikey5852/Chat-Pins/issues"
   },
-  "license": "CC0-1.0",
+  "license": "GPL-3.0-only",
   "icon": "assets/chat_pins/icon.png",
-  "environment": "*",
+  "environment": "client",
   "entrypoints": {
     "main": [],
     "client": [
@@ -28,10 +29,6 @@
     "fabricloader": ">=0.20.1",
     "minecraft": "~1.21.1",
     "java": ">=21",
-    "architectury": ">=13.0.11",
     "fabric-api": "*"
-  },
-  "suggests": {
-    "another-mod": "*"
   }
 }

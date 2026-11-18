@@ -13,10 +13,10 @@ import org.lwjgl.glfw.GLFW;
 
 public class PinKeyBind {
     public static final KeyMapping KEY = KeyBindingHelper.registerKeyBinding(
-        new KeyMapping("key.chat_pins.pin", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_P, "keys")
+        new KeyMapping("key.chat_pins.pin", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_K, "key.categories.chat_pins")
     );
     public static final KeyMapping KEY_MANAGER = KeyBindingHelper.registerKeyBinding(
-        new KeyMapping("key.chat_pins.manager", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_O, "keys")
+        new KeyMapping("key.chat_pins.manager", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_O, "key.categories.chat_pins")
     );
 
     public static void register() {

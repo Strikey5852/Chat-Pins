@@ -1,4 +1,7 @@
 {
+  "key.categories.chat_pins": "Chat Pins",
+  "key.chat_pins.pin": "Toggle Pin Overlay",
+  "key.chat_pins.manager": "Open Pin Manager",
   "chat_pins.screen.title": "Chat Pins",
   "chat_pins.screen.overlay_scale": "Overlay Scale",
   "chat_pins.screen.overlay_scale_value": "Overlay Scale: %s",

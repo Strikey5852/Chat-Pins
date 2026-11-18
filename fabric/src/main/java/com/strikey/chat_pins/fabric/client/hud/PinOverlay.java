@@ -46,7 +46,7 @@ public class PinOverlay {
             int displayed = 0;
             for (int i = 0; i < Math.min(pins.size(), MAX_DISPLAY); i++) {
                 Pin pin = pins.get(i);
-                String text = pin.sender() + ": " + pin.content();
+                String text = (pin.system() ? "[System] " : "") + pin.sender() + ": " + pin.content();
                 List<FormattedCharSequence> wrapped = mc.font.split(Component.literal(text), MAX_TEXT_WIDTH);
                 lines.addAll(wrapped);
                 displayed++;
