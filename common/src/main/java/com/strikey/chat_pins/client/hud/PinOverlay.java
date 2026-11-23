@@ -22,7 +22,7 @@ public class PinOverlay {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
-        if (mc.screen != null) {
+        if (mc.screen != null || mc.options.hideGui || mc.getDebugOverlay().showDebugScreen()) {
             return;
         }
         if (mc.level == null || mc.player == null) {
