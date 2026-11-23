@@ -1,6 +1,8 @@
 package com.strikey.chat_pins;
 
 import com.strikey.chat_pins.pin.PinManager;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ServerData;
 import java.nio.file.Path;
 
 public final class ChatPins {
@@ -15,4 +17,9 @@ public final class ChatPins {
 
     public static PinManager getPinManager() { return pinManager; }
     public static ChatPinsConfig getConfig() { return ChatPinsConfig.get(); }
+
+    public static String worldKey() {
+        ServerData server = Minecraft.getInstance().getCurrentServer();
+        return server != null ? server.ip.replaceAll("[^a-zA-Z0-9._-]", "_") : "singleplayer";
+    }
 }

@@ -15,7 +15,7 @@ public final class ChatPinsConfig {
     public static final String KEY_SORT_MODE = "sortMode";
     public static final String DEFAULT_SORT_MODE = "NEWEST";
 
-    private static volatile ChatPinsConfig instance;
+    private static ChatPinsConfig instance;
 
     private final Path configPath;
     private float overlayScale = DEFAULT_OVERLAY_SCALE;
@@ -72,7 +72,7 @@ public final class ChatPinsConfig {
                     }
                 }
             } else {
-                createDefault();
+                save();
             }
         } catch (IOException ignored) {}
     }
@@ -91,10 +91,5 @@ public final class ChatPinsConfig {
                 out.write(sb.toString().getBytes(StandardCharsets.UTF_8));
             }
         } catch (IOException ignored) {}
-    }
-
-    private void createDefault() {
-        overlayScale = DEFAULT_OVERLAY_SCALE;
-        save();
     }
 }

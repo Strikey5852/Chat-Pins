@@ -1,5 +1,7 @@
 package com.strikey.chat_pins.client.accessor;
 
+import net.minecraft.network.chat.Component;
+
 public interface ChatComponentAccessor {
-    String chat_pins$getMessageAt(double mouseX, double mouseY);
+    Component chat_pins$getMessageAt(double mouseX, double mouseY);
 }

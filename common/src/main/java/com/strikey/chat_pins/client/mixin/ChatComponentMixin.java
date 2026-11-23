@@ -1,10 +1,10 @@
 package com.strikey.chat_pins.client.mixin;
 
 import com.strikey.chat_pins.client.accessor.ChatComponentAccessor;
-import com.strikey.chat_pins.client.accessor.LineAccessor;
-import net.minecraft.client.Minecraft;
+import net.minecraft.client.GuiMessage;
 import net.minecraft.client.gui.components.ChatComponent;
-import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.network.chat.Component;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 
@@ -14,34 +14,31 @@ import java.util.List;
 public abstract class ChatComponentMixin implements ChatComponentAccessor {
 
     @Shadow
-    private List<?> trimmedMessages;
+    @Final
+    private List<GuiMessage> allMessages;
 
     @Shadow
-    public abstract int getLineHeight();
+    @Final
+    private List<GuiMessage.Line> trimmedMessages;
 
     @Shadow
-    public abstract double getScale();
+    protected abstract double screenToChatX(double x);
 
     @Shadow
-    public abstract int getMessageLineIndexAt(double x, double y);
+    protected abstract double screenToChatY(double y);
 
-    public String chat_pins$getMessageAt(double mouseX, double mouseY) {
-        int lineHeight = getLineHeight();
-        double scale = getScale();
-        int screenH = Minecraft.getInstance().getWindow().getGuiScaledHeight();
-        double chatX = mouseX / scale - 4.0;
-        double chatY = (screenH - mouseY - 40.0) / (scale * lineHeight);
+    @Shadow
+    protected abstract int getMessageLineIndexAt(double x, double y);
 
-        int lineIndex = getMessageLineIndexAt(chatX, chatY);
-        if (lineIndex < 0) return null;
+    @Override
+    public Component chat_pins$getMessageAt(double mouseX, double mouseY) {
+        int line = getMessageLineIndexAt(screenToChatX(mouseX), screenToChatY(mouseY));
+        if (line < 0) return null;
 
-        if (lineIndex >= trimmedMessages.size()) return null;
-
-        Object line = trimmedMessages.get(lineIndex);
-        FormattedCharSequence seq = ((LineAccessor) line).chat_pins$content();
-
-        StringBuilder sb = new StringBuilder();
-        seq.accept((index, style, codepoint) -> { sb.appendCodePoint(codepoint); return true; });
-        return sb.toString().trim();
+        int index = -1;
+        for (int i = 0; i <= line; i++) {
+            if (trimmedMessages.get(i).endOfEntry()) index++;
+        }
+        return index < allMessages.size() ? allMessages.get(index).content() : null;
     }
 }

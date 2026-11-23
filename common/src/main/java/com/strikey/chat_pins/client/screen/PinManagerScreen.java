@@ -2,14 +2,15 @@ package com.strikey.chat_pins.client.screen;
 
 import com.strikey.chat_pins.ChatPins;
 import com.strikey.chat_pins.pin.Pin;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FormattedCharSequence;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -29,7 +30,6 @@ public class PinManagerScreen extends Screen {
     private static final int SEARCH_WIDTH = 160;
     private static final int SEARCH_HEIGHT = 20;
     private static final int SLIDER_WIDTH = 80;
-    private static final int SORT_BUTTON_WIDTH = 50;
     private static final int BUTTON_WIDTH = 50;
     private static final int BUTTON_HEIGHT = 16;
     private static final int MIN_ROW_HEIGHT = 21;
@@ -66,23 +66,15 @@ public class PinManagerScreen extends Screen {
     private String searchText = "";
     private SortMode sortMode = SortMode.NEWEST;
     private PositionMode positionMode = PositionMode.TOP_RIGHT;
-    private boolean searchFocused = false;
     private boolean draggingScrollbar = false;
     private int dragStartScrollOffset;
     private double dragStartMouseY;
-    private Button sortButton;
-    private Button positionButton;
     private AbstractSliderButton scaleButton;
     private boolean scaleButtonPressed;
 
     public PinManagerScreen(String worldKey) {
-        this(worldKey, 0);
-    }
-
-    public PinManagerScreen(String worldKey, int scrollOffset) {
         super(Component.translatable("chat_pins.screen.title"));
         this.worldKey = worldKey;
-        this.scrollOffset = scrollOffset;
     }
 
     @Override
@@ -90,25 +82,26 @@ public class PinManagerScreen extends Screen {
         panelX = (width - PANEL_WIDTH) / 2;
         panelY = (height - PANEL_HEIGHT) / 2;
 
-        String savedSortMode = ChatPins.getConfig().getSortMode();
-        sortMode = switch (savedSortMode) {
-            case "OLDEST" -> SortMode.OLDEST;
-            case "NAME" -> SortMode.NAME;
-            default -> SortMode.NEWEST;
-        };
+        for (SortMode mode : SortMode.values()) {
+            if (mode.name().equals(ChatPins.getConfig().getSortMode())) sortMode = mode;
+        }
+        for (PositionMode mode : PositionMode.values()) {
+            if (mode.name().equals(ChatPins.getConfig().getOverlayPosition())) positionMode = mode;
+        }
 
-        String savedPosition = ChatPins.getConfig().getOverlayPosition();
-        positionMode = switch (savedPosition) {
-            case "TOP_LEFT" -> PositionMode.TOP_LEFT;
-            case "BOTTOM_LEFT" -> PositionMode.BOTTOM_LEFT;
-            case "BOTTOM_RIGHT" -> PositionMode.BOTTOM_RIGHT;
-            default -> PositionMode.TOP_RIGHT;
-        };
+        scrollOffset = Math.min(scrollOffset, maxScroll());
+
+        EditBox search = new EditBox(font, panelX + (PANEL_WIDTH - SEARCH_WIDTH) / 2, panelY + HEADER_HEIGHT,
+                SEARCH_WIDTH, SEARCH_HEIGHT, Component.translatable("chat_pins.search.placeholder"));
+        search.setHint(Component.translatable("chat_pins.search.placeholder"));
+        search.setValue(searchText);
+        search.setResponder(text -> {
+            searchText = text;
+            scrollOffset = Math.min(scrollOffset, maxScroll());
+        });
+        addRenderableWidget(search);
 
         int footerY = panelY + PANEL_HEIGHT - FOOTER_HEIGHT + (FOOTER_HEIGHT - BUTTON_HEIGHT) / 2;
-
-        int maxScroll = maxScroll();
-        scrollOffset = Math.min(scrollOffset, maxScroll);
 
         scaleButton = new AbstractSliderButton(
                 panelX + 10, footerY, SLIDER_WIDTH, BUTTON_HEIGHT,
@@ -128,79 +121,44 @@ public class PinManagerScreen extends Screen {
         };
         addRenderableWidget(scaleButton);
 
-        int positionX = panelX + 98;
-        positionButton = Button.builder(positionMode.label, b -> cyclePosition())
-                .bounds(positionX, footerY, BUTTON_WIDTH, BUTTON_HEIGHT).build();
-        addRenderableWidget(positionButton);
+        addRenderableWidget(Button.builder(positionMode.label, b -> {
+            positionMode = PositionMode.values()[(positionMode.ordinal() + 1) % PositionMode.values().length];
+            ChatPins.getConfig().setOverlayPosition(positionMode.name());
+            b.setMessage(positionMode.label);
+        }).bounds(panelX + 98, footerY, BUTTON_WIDTH, BUTTON_HEIGHT).build());
 
-        int sortX = panelX + 156;
-        sortButton = Button.builder(sortMode.label, b -> cycleSort())
-                .bounds(sortX, footerY, SORT_BUTTON_WIDTH, BUTTON_HEIGHT).build();
-        addRenderableWidget(sortButton);
+        addRenderableWidget(Button.builder(sortMode.label, b -> {
+            sortMode = SortMode.values()[(sortMode.ordinal() + 1) % SortMode.values().length];
+            ChatPins.getConfig().setSortMode(sortMode.name());
+            b.setMessage(sortMode.label);
+        }).bounds(panelX + 156, footerY, BUTTON_WIDTH, BUTTON_HEIGHT).build());
 
-        int clearX = panelX + 214;
-        Button clearButton = Button.builder(Component.translatable("chat_pins.screen.clear_all"), b -> {
-            Minecraft.getInstance().setScreen(new ConfirmScreen(
-                    confirmed -> {
-                        if (confirmed) {
-                            ChatPins.getPinManager().clearPins(worldKey);
-                        }
-                        Minecraft.getInstance().setScreen(new PinManagerScreen(worldKey, scrollOffset));
-                    },
-                    Component.translatable("chat_pins.confirm.clear.title"),
-                    Component.translatable("chat_pins.confirm.clear.message"),
-                    Component.translatable("chat_pins.confirm.yes"),
-                    Component.translatable("chat_pins.confirm.no")
-            ));
-        }).bounds(clearX, footerY, BUTTON_WIDTH, BUTTON_HEIGHT).build();
-        addRenderableWidget(clearButton);
+        addRenderableWidget(Button.builder(Component.translatable("chat_pins.screen.clear_all"), b ->
+                minecraft.setScreen(new ConfirmScreen(
+                        confirmed -> {
+                            if (confirmed) {
+                                ChatPins.getPinManager().clearPins(worldKey);
+                            }
+                            minecraft.setScreen(this);
+                        },
+                        Component.translatable("chat_pins.confirm.clear.title"),
+                        Component.translatable("chat_pins.confirm.clear.message"),
+                        Component.translatable("chat_pins.confirm.yes"),
+                        Component.translatable("chat_pins.confirm.no")
+                ))
+        ).bounds(panelX + 214, footerY, BUTTON_WIDTH, BUTTON_HEIGHT).build());
 
-        int doneX = panelX + 272;
-        Button doneButton = Button.builder(Component.translatable("chat_pins.screen.done"), b -> onClose())
-                .bounds(doneX, footerY, BUTTON_WIDTH, BUTTON_HEIGHT).build();
-        addRenderableWidget(doneButton);
-    }
-
-    private void cycleSort() {
-        sortMode = switch (sortMode) {
-            case NEWEST -> SortMode.OLDEST;
-            case OLDEST -> SortMode.NAME;
-            case NAME -> SortMode.NEWEST;
-        };
-        ChatPins.getConfig().setSortMode(sortMode.name());
-        PinManagerScreen next = new PinManagerScreen(worldKey, scrollOffset);
-        next.sortMode = sortMode;
-        Minecraft.getInstance().setScreen(next);
-    }
-
-    private void cyclePosition() {
-        positionMode = switch (positionMode) {
-            case TOP_LEFT -> PositionMode.TOP_RIGHT;
-            case TOP_RIGHT -> PositionMode.BOTTOM_LEFT;
-            case BOTTOM_LEFT -> PositionMode.BOTTOM_RIGHT;
-            case BOTTOM_RIGHT -> PositionMode.TOP_LEFT;
-        };
-        ChatPins.getConfig().setOverlayPosition(positionMode.name());
-        PinManagerScreen next = new PinManagerScreen(worldKey, scrollOffset);
-        next.positionMode = positionMode;
-        Minecraft.getInstance().setScreen(next);
-    }
-
-    private List<Pin> allPins() {
-        return ChatPins.getPinManager().getPins(worldKey);
+        addRenderableWidget(Button.builder(Component.translatable("chat_pins.screen.done"), b -> onClose())
+                .bounds(panelX + 272, footerY, BUTTON_WIDTH, BUTTON_HEIGHT).build());
     }
 
     private List<Pin> visiblePins() {
         String filter = searchText.toLowerCase(Locale.ROOT);
         List<Pin> result = new ArrayList<>();
-        for (Pin pin : allPins()) {
-            if (!filter.isEmpty()) {
-                String haystack = (pin.sender() + ": " + pin.content()).toLowerCase(Locale.ROOT);
-                if (!haystack.contains(filter)) {
-                    continue;
-                }
+        for (Pin pin : ChatPins.getPinManager().getPins(worldKey)) {
+            if (filter.isEmpty() || (pin.sender() + ": " + pin.content()).toLowerCase(Locale.ROOT).contains(filter)) {
+                result.add(pin);
             }
-            result.add(pin);
         }
 
         switch (sortMode) {
@@ -211,123 +169,80 @@ public class PinManagerScreen extends Screen {
         return result;
     }
 
-    private int listY() {
-        return panelY + HEADER_HEIGHT;
+    private static String time(Pin pin) {
+        return Instant.ofEpochMilli(pin.timestamp()).atZone(ZoneId.systemDefault()).format(TIME_FORMAT);
     }
 
-    private int searchY() {
-        return listY();
+    private List<FormattedCharSequence> lines(Pin pin) {
+        return font.split(Component.literal(pin.text()), PANEL_WIDTH - 88 - font.width(time(pin)));
     }
 
-    private int listContentY() {
-        return searchY() + SEARCH_HEIGHT + HEADER_HEIGHT;
+    private int rowHeight(List<FormattedCharSequence> lines) {
+        return Math.max(MIN_ROW_HEIGHT, (lines.size() + 1) * font.lineHeight);
     }
 
-    private int listContentHeight() {
-        int raw = PANEL_HEIGHT - FOOTER_HEIGHT - (listContentY() - panelY);
-        return raw;
-    }
-
-    private int maxScroll() {
-        return Math.max(0, computeTotalContentHeight(visiblePins()) - listContentHeight());
-    }
-
-    private int computeTotalContentHeight(List<Pin> pins) {
+    private int contentHeight(List<Pin> pins) {
         int total = 0;
-        int lineHeight = font.lineHeight;
-        int maxLabelWidth = PANEL_WIDTH - 80;
         for (Pin pin : pins) {
-            String timeStr = Instant.ofEpochMilli(pin.timestamp())
-                    .atZone(ZoneId.systemDefault())
-                    .format(TIME_FORMAT);
-            int timeWidth = font.width(timeStr);
-            int remainingWidth = maxLabelWidth - timeWidth - 8;
-            String label = (pin.system() ? "[System] " : "") + pin.sender() + ": " + pin.content();
-            int lines = wrapText(label, remainingWidth).size();
-            total += Math.max(MIN_ROW_HEIGHT, lines * lineHeight + lineHeight);
+            total += rowHeight(lines(pin));
         }
         return total;
     }
 
-    private List<String> wrapText(String text, int maxWidth) {
-        if (text.isEmpty()) {
-            return List.of("");
-        }
-        List<String> lines = new ArrayList<>();
-        String[] words = text.split(" ");
-        StringBuilder current = new StringBuilder();
-        for (String word : words) {
-            if (font.width(word) > maxWidth) {
-                if (current.length() > 0) {
-                    lines.add(current.toString());
-                    current.setLength(0);
-                }
-                String remaining = word;
-                while (!remaining.isEmpty()) {
-                    String piece = font.plainSubstrByWidth(remaining, maxWidth);
-                    if (piece.isEmpty()) {
-                        piece = remaining.substring(0, 1);
-                    }
-                    lines.add(piece);
-                    remaining = remaining.substring(piece.length());
-                }
-            } else {
-                String candidate = current.isEmpty() ? word : current + " " + word;
-                if (font.width(candidate) <= maxWidth) {
-                    if (current.length() > 0) {
-                        current.append(' ');
-                    }
-                    current.append(word);
-                } else {
-                    lines.add(current.toString());
-                    current = new StringBuilder(word);
-                }
-            }
-        }
-        if (current.length() > 0) {
-            lines.add(current.toString());
-        }
-        return lines;
+    private int listY() {
+        return panelY + HEADER_HEIGHT + SEARCH_HEIGHT + HEADER_HEIGHT;
+    }
+
+    private int listHeight() {
+        return PANEL_HEIGHT - FOOTER_HEIGHT - (listY() - panelY);
+    }
+
+    private int maxScroll() {
+        return Math.max(0, contentHeight(visiblePins()) - listHeight());
     }
 
     private int scrollbarX() {
         return panelX + PANEL_WIDTH - 10;
     }
 
-    private int scrollbarThumbY(int scrollOffset, int maxScroll) {
-        int thumbHeight = Math.max(20, (int) ((float) listContentHeight() * listContentHeight() / (float) Math.max(1, computeTotalContentHeight(visiblePins()))));
-        return listContentY() + (int) ((float) scrollOffset / Math.max(1, maxScroll) * (listContentHeight() - thumbHeight));
+    private int thumbHeight(int contentHeight) {
+        return Math.max(20, (int) ((float) listHeight() * listHeight() / Math.max(1, contentHeight)));
     }
 
-    private int scrollbarThumbHeight() {
-        return Math.max(20, (int) ((float) listContentHeight() * listContentHeight() / (float) Math.max(1, computeTotalContentHeight(visiblePins()))));
+    private int thumbY(int thumbHeight, int maxScroll) {
+        return listY() + (int) ((float) scrollOffset / Math.max(1, maxScroll) * (listHeight() - thumbHeight));
     }
 
-    private boolean isSearchArea(double mouseX, double mouseY) {
-        int searchX = panelX + (PANEL_WIDTH - SEARCH_WIDTH) / 2;
-        return mouseX >= searchX && mouseX <= searchX + SEARCH_WIDTH
-                && mouseY >= searchY() && mouseY <= searchY() + SEARCH_HEIGHT;
+    private int rowAt(double mouseX, double mouseY, List<Pin> pins) {
+        if (mouseX < panelX || mouseX > panelX + PANEL_WIDTH - 14 || mouseY < listY() || mouseY > listY() + listHeight()) {
+            return -1;
+        }
+        int y = listY() - scrollOffset;
+        for (int i = 0; i < pins.size(); i++) {
+            y += rowHeight(lines(pins.get(i)));
+            if (mouseY <= y) return i;
+        }
+        return -1;
+    }
+
+    private boolean isOverRemove(double mouseX) {
+        int removeX = panelX + PANEL_WIDTH - 54;
+        return mouseX >= removeX && mouseX <= removeX + 44;
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 0 && scaleButton != null && scaleButton.isMouseOver(mouseX, mouseY)) {
+        if (button == 0 && scaleButton.isMouseOver(mouseX, mouseY)) {
             scaleButtonPressed = true;
         }
         if (super.mouseClicked(mouseX, mouseY, button)) return true;
         if (button != 0) return false;
 
-        if (isSearchArea(mouseX, mouseY)) {
-            searchFocused = true;
-            return true;
-        }
-
         int maxScroll = maxScroll();
         if (maxScroll > 0) {
-            int barX = scrollbarX();
-            int thumbY = scrollbarThumbY(scrollOffset, maxScroll);
-            int thumbHeight = scrollbarThumbHeight();
-            if (mouseX >= barX && mouseX <= barX + 6 && mouseY >= thumbY && mouseY <= thumbY + thumbHeight) {
+            int thumbHeight = thumbHeight(contentHeight(visiblePins()));
+            int thumbY = thumbY(thumbHeight, maxScroll);
+            if (mouseX >= scrollbarX() && mouseX <= scrollbarX() + 6 && mouseY >= thumbY && mouseY <= thumbY + thumbHeight) {
                 draggingScrollbar = true;
                 dragStartScrollOffset = scrollOffset;
                 dragStartMouseY = mouseY;
@@ -336,29 +251,12 @@ public class PinManagerScreen extends Screen {
         }
 
         List<Pin> pins = visiblePins();
-        int listY = listContentY();
-        int currentY = listY - scrollOffset;
-        int lineHeight = font.lineHeight;
-        int maxLabelWidth = PANEL_WIDTH - 80;
-        for (int i = 0; i < pins.size(); i++) {
-            Pin pin = pins.get(i);
-            String timeStr = Instant.ofEpochMilli(pin.timestamp())
-                    .atZone(ZoneId.systemDefault())
-                    .format(TIME_FORMAT);
-            int timeWidth = font.width(timeStr);
-            int remainingWidth = maxLabelWidth - timeWidth - 8;
-            String label = (pin.system() ? "[System] " : "") + pin.sender() + ": " + pin.content();
-            int rowHeight = Math.max(MIN_ROW_HEIGHT, wrapText(label, remainingWidth).size() * lineHeight + lineHeight);
-            int removeX = panelX + PANEL_WIDTH - 54;
-            if (mouseX >= removeX && mouseX <= removeX + 44 && mouseY >= currentY + 2 && mouseY <= currentY + rowHeight - 2) {
-                ChatPins.getPinManager().removePin(worldKey, pins.get(i).id());
-                searchFocused = false;
-                Minecraft.getInstance().setScreen(new PinManagerScreen(worldKey, scrollOffset));
-                return true;
-            }
-            currentY += rowHeight;
+        int row = rowAt(mouseX, mouseY, pins);
+        if (row >= 0 && isOverRemove(mouseX)) {
+            ChatPins.getPinManager().removePin(worldKey, pins.get(row).id());
+            scrollOffset = Math.min(scrollOffset, maxScroll());
+            return true;
         }
-        searchFocused = false;
         return false;
     }
 
@@ -369,10 +267,8 @@ public class PinManagerScreen extends Screen {
         }
 
         int maxScroll = maxScroll();
-        int thumbHeight = scrollbarThumbHeight();
-        int trackHeight = listContentHeight() - thumbHeight;
-        double dragDelta = mouseY - dragStartMouseY;
-        int newOffset = dragStartScrollOffset + (int) (dragDelta * maxScroll / Math.max(1, trackHeight));
+        int trackHeight = listHeight() - thumbHeight(contentHeight(visiblePins()));
+        int newOffset = dragStartScrollOffset + (int) ((mouseY - dragStartMouseY) * maxScroll / Math.max(1, trackHeight));
         scrollOffset = Math.max(0, Math.min(maxScroll, newOffset));
         return true;
     }
@@ -385,7 +281,7 @@ public class PinManagerScreen extends Screen {
         }
         boolean result = super.mouseReleased(mouseX, mouseY, button);
         if (scaleButtonPressed) {
-            this.setFocused(null);
+            setFocused(null);
             scaleButtonPressed = false;
         }
         return result;
@@ -393,7 +289,7 @@ public class PinManagerScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (mouseX >= panelX && mouseX <= panelX + PANEL_WIDTH && mouseY >= listContentY() && mouseY <= listContentY() + listContentHeight()) {
+        if (mouseX >= panelX && mouseX <= panelX + PANEL_WIDTH && mouseY >= listY() && mouseY <= listY() + listHeight()) {
             scrollOffset = (int) Math.max(0, Math.min(maxScroll(), scrollOffset - scrollY * font.lineHeight));
             return true;
         }
@@ -401,177 +297,72 @@ public class PinManagerScreen extends Screen {
     }
 
     @Override
-    public boolean charTyped(char codePoint, int modifiers) {
-        if (searchFocused) {
-            if (Character.isISOControl(codePoint)) {
-                return true;
-            }
-            searchText += codePoint;
-            return true;
-        }
-        return super.charTyped(codePoint, modifiers);
-    }
-
-    @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (searchFocused) {
-            if (keyCode == 259 || keyCode == 260) { // Backspace / Delete
-                if (!searchText.isEmpty()) {
-                    searchText = searchText.substring(0, searchText.length() - 1);
-                }
-                return true;
-            }
-        }
-        return super.keyPressed(keyCode, scanCode, modifiers);
-    }
-
-    private int hoveredRow(double mouseX, double mouseY, List<Pin> pins) {
-        int listY = listContentY();
-        int currentY = listY - scrollOffset;
-        int lineHeight = font.lineHeight;
-        int maxLabelWidth = PANEL_WIDTH - 80;
-        for (int i = 0; i < pins.size(); i++) {
-            Pin pin = pins.get(i);
-            String timeStr = Instant.ofEpochMilli(pin.timestamp())
-                    .atZone(ZoneId.systemDefault())
-                    .format(TIME_FORMAT);
-            int timeWidth = font.width(timeStr);
-            int remainingWidth = maxLabelWidth - timeWidth - 8;
-            String label = (pin.system() ? "[System] " : "") + pin.sender() + ": " + pin.content();
-            int rowHeight = Math.max(MIN_ROW_HEIGHT, wrapText(label, remainingWidth).size() * lineHeight + lineHeight);
-            if (mouseX >= panelX && mouseX <= panelX + PANEL_WIDTH - 14 && mouseY >= currentY && mouseY <= currentY + rowHeight) {
-                return i;
-            }
-            currentY += rowHeight;
-        }
-        return -1;
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.renderBackground(g, mouseX, mouseY, partialTick);
+        g.fill(panelX, panelY, panelX + PANEL_WIDTH, panelY + PANEL_HEIGHT, 0xDD101010);
+        g.renderOutline(panelX, panelY, PANEL_WIDTH, PANEL_HEIGHT, 0xFFFFFFFF);
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBlurredBackground(partialTick);
         super.render(g, mouseX, mouseY, partialTick);
         g.drawCenteredString(font, title, width / 2, panelY - 14, 0xFFFFFF);
 
-        g.fill(panelX, panelY, panelX + PANEL_WIDTH, panelY + PANEL_HEIGHT, 0xDD101010);
-        g.fill(panelX, panelY, panelX + PANEL_WIDTH, panelY + 1, 0xFFFFFFFF);
-        g.fill(panelX, panelY + PANEL_HEIGHT - 1, panelX + PANEL_WIDTH, panelY + PANEL_HEIGHT, 0xFFFFFFFF);
-        g.fill(panelX, panelY, panelX + 1, panelY + PANEL_HEIGHT, 0xFFFFFFFF);
-        g.fill(panelX + PANEL_WIDTH - 1, panelY, panelX + PANEL_WIDTH, panelY + PANEL_HEIGHT, 0xFFFFFFFF);
-
         List<Pin> pins = visiblePins();
         int listY = listY();
-        int searchY = searchY();
-        int hoveredRow = hoveredRow(mouseX, mouseY, pins);
-
-        int searchX = panelX + (PANEL_WIDTH - SEARCH_WIDTH) / 2;
-        // Search field background
-        boolean searchHovered = isSearchArea(mouseX, mouseY);
-        int searchBg = searchFocused ? 0xFF6A6A6A : (searchHovered ? 0xFF5A5A5A : 0xFF4A4A4A);
-        g.fill(searchX, searchY, searchX + SEARCH_WIDTH, searchY + SEARCH_HEIGHT, searchBg);
-        g.fill(searchX, searchY, searchX + SEARCH_WIDTH, searchY + 1, 0xFFFFFFFF);
-        g.fill(searchX, searchY + SEARCH_HEIGHT - 1, searchX + SEARCH_WIDTH, searchY + SEARCH_HEIGHT, 0xFFFFFFFF);
-        g.fill(searchX, searchY, searchX + 1, searchY + SEARCH_HEIGHT, 0xFFFFFFFF);
-        g.fill(searchX + SEARCH_WIDTH - 1, searchY, searchX + SEARCH_WIDTH, searchY + SEARCH_HEIGHT, 0xFFFFFFFF);
-
-        // Search text (vertically centred)
-        String displayText = searchText;
-        int textY = searchY + (SEARCH_HEIGHT - font.lineHeight) / 2 + 1;
-        if (searchText.isEmpty()) {
-            g.drawString(font, Component.translatable("chat_pins.search.placeholder"), searchX + 8, textY, 0x808080, false);
-        } else {
-            g.drawString(font, displayText, searchX + 8, textY, 0xFFFFFF, false);
-        }
-
+        int listHeight = listHeight();
         if (pins.isEmpty()) {
             g.drawCenteredString(font, Component.translatable("chat_pins.screen.no_pins"),
-                    panelX + PANEL_WIDTH / 2, listContentY() + listContentHeight() / 2, 0xAAAAAA);
-        } else {
-            int lineHeight = font.lineHeight;
-            int maxLabelWidth = PANEL_WIDTH - 80;
-            int totalContentHeight = computeTotalContentHeight(pins);
+                    panelX + PANEL_WIDTH / 2, listY + listHeight / 2, 0xAAAAAA);
+            return;
+        }
 
-            List<List<String>> wrappedLines = new ArrayList<>(pins.size());
-            int[] rowHeights = new int[pins.size()];
-            String[] timeStrs = new String[pins.size()];
-            int[] timeWidths = new int[pins.size()];
-            for (int i = 0; i < pins.size(); i++) {
-                Pin pin = pins.get(i);
-                String timeStr = Instant.ofEpochMilli(pin.timestamp())
-                        .atZone(ZoneId.systemDefault())
-                        .format(TIME_FORMAT);
-                int timeWidth = font.width(timeStr);
-                int remainingWidth = maxLabelWidth - timeWidth - 8;
-                String label = (pin.system() ? "[System] " : "") + pin.sender() + ": " + pin.content();
-                List<String> lines = wrapText(label, remainingWidth);
-                wrappedLines.add(lines);
-                timeStrs[i] = timeStr;
-                timeWidths[i] = timeWidth;
-                rowHeights[i] = Math.max(MIN_ROW_HEIGHT, lines.size() * lineHeight + lineHeight);
-            }
+        int lineHeight = font.lineHeight;
+        int hoveredRow = rowAt(mouseX, mouseY, pins);
+        int contentHeight = 0;
 
-            int listContentY = listContentY();
-            int listContentHeight = listContentHeight();
-            g.enableScissor(panelX + 2, listContentY, panelX + PANEL_WIDTH - 14, listContentY + listContentHeight);
+        g.enableScissor(panelX + 2, listY, panelX + PANEL_WIDTH - 14, listY + listHeight);
+        int rowY = listY - scrollOffset;
+        for (int i = 0; i < pins.size(); i++) {
+            Pin pin = pins.get(i);
+            List<FormattedCharSequence> lines = lines(pin);
+            int rowHeight = rowHeight(lines);
+            contentHeight += rowHeight;
 
-            int currentY = listContentY - scrollOffset;
-            for (int i = 0; i < pins.size(); i++) {
-                Pin pin = pins.get(i);
-                List<String> lines = wrappedLines.get(i);
-                int rowHeight = rowHeights[i];
-                int rowY = currentY;
-
-                if (rowY + rowHeight < listContentY || rowY > listContentY + listContentHeight) {
-                    currentY += rowHeight;
-                    continue;
-                }
-
-                boolean rowHovered = hoveredRow == i;
-                int rowBg = rowHovered ? 0xFF5A5A5A : (i % 2 == 0 ? 0xFF555555 : 0xFF333333);
+            if (rowY + rowHeight >= listY && rowY <= listY + listHeight) {
+                int rowBg = hoveredRow == i ? 0xFF5A5A5A : (i % 2 == 0 ? 0xFF555555 : 0xFF333333);
                 g.fill(panelX + 2, rowY + 1, panelX + PANEL_WIDTH - 14, rowY + rowHeight - 1, rowBg);
 
-                String timeStr = timeStrs[i];
-                int timeWidth = timeWidths[i];
+                String time = time(pin);
+                g.drawString(font, time, panelX + 8, rowY + (rowHeight - lineHeight) / 2, 0x808080, false);
 
-                int textBlockHeight = lines.size() * lineHeight;
-                int labelY = rowY + (rowHeight - textBlockHeight) / 2;
-                int timeY = rowY + (rowHeight - lineHeight) / 2;
-                g.drawString(font, timeStr, panelX + 8, timeY, 0x808080, false);
-
-                int labelX = panelX + 8 + timeWidth + 4;
+                int labelX = panelX + 12 + font.width(time);
+                int labelY = rowY + (rowHeight - lines.size() * lineHeight) / 2;
                 int textColor = pin.system() ? 0xA0A0A0 : 0xFFFFFF;
-                for (String line : lines) {
+                for (FormattedCharSequence line : lines) {
                     g.drawString(font, line, labelX, labelY, textColor, false);
                     labelY += lineHeight;
                 }
 
-                int removeX = panelX + PANEL_WIDTH - 54;
-                int removeButtonY = rowY + (rowHeight - 16) / 2;
-                boolean removeHovered = mouseX >= removeX && mouseX <= removeX + 44 && mouseY >= rowY + 2 && mouseY <= rowY + rowHeight - 2;
+                boolean removeHovered = hoveredRow == i && isOverRemove(mouseX);
                 g.blit(ResourceLocation.withDefaultNamespace("textures/gui/sprites/widget/" + (removeHovered ? "cross_button_highlighted" : "cross_button") + ".png"),
-                        removeX + 14, removeButtonY, 0, 0, 16, 16, 16, 16);
-
-                currentY += rowHeight;
+                        panelX + PANEL_WIDTH - 40, rowY + (rowHeight - 16) / 2, 0, 0, 16, 16, 16, 16);
             }
-            g.disableScissor();
-
-            g.fill(panelX + 2, listContentY + listContentHeight, panelX + PANEL_WIDTH - 2, listContentY + listContentHeight + 1, 0x40FFFFFF);
-
-            int maxScroll = maxScroll();
-            int barX = panelX + PANEL_WIDTH - 10;
-            int thumbHeight = Math.max(20, (int) ((float) listContentHeight * listContentHeight / (float) Math.max(1, totalContentHeight)));
-            int thumbY = listContentY + (int) ((float) scrollOffset / Math.max(1, maxScroll) * (listContentHeight - thumbHeight));
-            ResourceLocation bg = ResourceLocation.withDefaultNamespace("widget/scroller_background");
-            ResourceLocation thumb = ResourceLocation.withDefaultNamespace("widget/scroller");
-            g.blitSprite(bg, barX, listContentY, 6, listContentHeight);
-            if (maxScroll > 0) {
-                g.blitSprite(thumb, barX, thumbY, 6, thumbHeight);
-            } else {
-                // Draw a disabled thumb when nothing can scroll
-                g.fill(barX, listContentY, barX + 6, listContentY + listContentHeight, 0xFF4A4A4A);
-            }
+            rowY += rowHeight;
         }
+        g.disableScissor();
 
+        g.fill(panelX + 2, listY + listHeight, panelX + PANEL_WIDTH - 2, listY + listHeight + 1, 0x40FFFFFF);
+
+        int barX = scrollbarX();
+        g.blitSprite(ResourceLocation.withDefaultNamespace("widget/scroller_background"), barX, listY, 6, listHeight);
+        int maxScroll = Math.max(0, contentHeight - listHeight);
+        if (maxScroll > 0) {
+            int thumbHeight = thumbHeight(contentHeight);
+            g.blitSprite(ResourceLocation.withDefaultNamespace("widget/scroller"), barX, thumbY(thumbHeight, maxScroll), 6, thumbHeight);
+        } else {
+            g.fill(barX, listY, barX + 6, listY + listHeight, 0xFF4A4A4A);
+        }
     }
 
     @Override

@@ -25,12 +25,11 @@ public class PinOverlay {
         if (mc.screen != null) {
             return;
         }
-        if (mc.level == null || mc.player == null || mc.font == null) {
+        if (mc.level == null || mc.player == null) {
             return;
         }
 
-        String worldKey = getWorldKey(mc);
-        List<Pin> pins = ChatPins.getPinManager().getPins(worldKey);
+        List<Pin> pins = ChatPins.getPinManager().getPins(ChatPins.worldKey());
         if (pins.isEmpty()) {
             return;
         }
@@ -41,13 +40,8 @@ public class PinOverlay {
         String position = ChatPins.getConfig().getOverlayPosition();
 
         List<FormattedCharSequence> lines = new ArrayList<>();
-        int displayed = 0;
-        for (int i = 0; i < Math.min(pins.size(), MAX_DISPLAY); i++) {
-            Pin pin = pins.get(i);
-            String text = (pin.system() ? "[System] " : "") + pin.sender() + ": " + pin.content();
-            List<FormattedCharSequence> wrapped = mc.font.split(Component.literal(text), MAX_TEXT_WIDTH);
-            lines.addAll(wrapped);
-            displayed++;
+        for (Pin pin : pins.subList(0, Math.min(pins.size(), MAX_DISPLAY))) {
+            lines.addAll(mc.font.split(Component.literal(pin.text()), MAX_TEXT_WIDTH));
         }
         if (pins.size() > MAX_DISPLAY) {
             lines.add(mc.font.split(Component.literal("+" + (pins.size() - MAX_DISPLAY) + " more"), MAX_TEXT_WIDTH).get(0));
@@ -109,12 +103,5 @@ public class PinOverlay {
 
     public static void toggle() {
         enabled = !enabled;
-    }
-
-    private static String getWorldKey(Minecraft mc) {
-        if (mc.getCurrentServer() != null) {
-            return mc.getCurrentServer().ip;
-        }
-        return "singleplayer";
     }
 }

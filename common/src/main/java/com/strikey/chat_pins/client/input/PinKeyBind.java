@@ -1,5 +1,6 @@
 package com.strikey.chat_pins.client.input;
 
+import com.strikey.chat_pins.ChatPins;
 import com.strikey.chat_pins.client.hud.PinOverlay;
 import com.strikey.chat_pins.client.screen.PinManagerScreen;
 import net.minecraft.client.KeyMapping;
@@ -20,8 +21,7 @@ public class PinKeyBind {
         }
         if (KEY_MANAGER.consumeClick()) {
             if (client.screen == null && client.level != null && client.player != null) {
-                String worldKey = client.getCurrentServer() != null ? client.getCurrentServer().ip : "singleplayer";
-                client.setScreen(new PinManagerScreen(worldKey));
+                client.setScreen(new PinManagerScreen(ChatPins.worldKey()));
             }
         }
     }

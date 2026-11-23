@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 public class PinManager {
@@ -30,7 +29,7 @@ public class PinManager {
         return pinsByWorld.computeIfAbsent(worldKey, k -> new ArrayList<>());
     }
 
-    public Optional<Pin> addPin(String worldKey, String sender, String content, boolean system) {
+    public void addPin(String worldKey, String sender, String content, boolean system) {
         List<Pin> pins = getPins(worldKey);
         Pin pin = new Pin(UUID.randomUUID().toString(), sender, content, System.currentTimeMillis(), system);
         pins.add(0, pin);
@@ -38,16 +37,6 @@ public class PinManager {
             pins.remove(pins.size() - 1);
         }
         save(worldKey);
-        return Optional.of(pin);
-    }
-
-    public boolean removePin(String worldKey, UUID id) {
-        List<Pin> pins = getPins(worldKey);
-        boolean removed = pins.removeIf(pin -> pin.id().equals(id.toString()));
-        if (removed) {
-            save(worldKey);
-        }
-        return removed;
     }
 
     public boolean removePin(String worldKey, String id) {
@@ -65,11 +54,7 @@ public class PinManager {
             return false;
         }
         pins.clear();
-        Path file = getFile(worldKey);
-        try {
-            Files.createDirectories(file.getParent());
-            Files.writeString(file, "[]");
-        } catch (IOException ignored) {}
+        save(worldKey);
         return true;
     }
 
@@ -100,14 +85,10 @@ public class PinManager {
     }
 
     public void save(String worldKey) {
-        List<Pin> pins = pinsByWorld.get(worldKey);
-        if (pins == null || pins.isEmpty()) {
-            return;
-        }
         Path file = getFile(worldKey);
         try {
             Files.createDirectories(file.getParent());
-            Files.writeString(file, gson.toJson(pins));
+            Files.writeString(file, gson.toJson(getPins(worldKey)));
         } catch (IOException ignored) {
         }
     }

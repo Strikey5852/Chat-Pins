@@ -24,7 +24,6 @@
   "mixins": [
     "chat_pins.mixins.json"
   ],
-  "accessWidener": "chat_pins.accesswidener",
   "depends": {
     "fabricloader": ">=0.20.1",
     "minecraft": "~1.21.1",
